@@ -2,10 +2,12 @@ package br.com.ifood.cadastro.rest;
 
 import br.com.ifood.cadastro.domain.entity.Prato;
 import br.com.ifood.cadastro.domain.entity.Restaurante;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import br.com.ifood.cadastro.rest.dto.*;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import javax.inject.Inject;
 import javax.transaction.Transactional;
+import javax.validation.Valid;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -18,23 +20,28 @@ import java.util.Optional;
 @Tag(name = "Restaurante")
 public class RestauranteResource {
 
+    @Inject
+    RestauranteMapper restauranteMapper;
+
     @GET
     public Response buscar() {
         List<Restaurante> restaurantes = Restaurante.listAll();
-        return Response.status(Response.Status.OK).entity(restaurantes).build();
+        List<RestauranteDTO> dtos = restauranteMapper.toListRestauranteDTO(restaurantes);
+        return Response.status(Response.Status.OK).entity(dtos).build();
     }
 
     @POST
     @Transactional
-    public Response adicionar(Restaurante dto) {
-        dto.persist();
+    public Response adicionar(@Valid AdicionarRestauranteDTO dto) {
+        Restaurante restaurante = restauranteMapper.toEntity(dto);
+        restaurante.persist();
         return Response.status(Response.Status.CREATED).build();
     }
 
     @PUT
     @Path("{idRestaurante}")
     @Transactional
-    public Response atualizar(@PathParam("idRestaurante") Long idRestaurante, Restaurante dto) {
+    public Response atualizar(@PathParam("idRestaurante") Long idRestaurante, AtualizarRestauranteDTO dto) {
         Optional<Restaurante> restauranteBanco = Restaurante.findByIdOptional(idRestaurante);
 
         if(restauranteBanco.isEmpty()) {
@@ -42,7 +49,8 @@ public class RestauranteResource {
         }
 
         Restaurante restaurante = restauranteBanco.get();
-        restaurante.nome = dto.nome;
+
+        restauranteMapper.toEntity(dto, restaurante);
         restaurante.persist();
 
         return Response.noContent().build();
@@ -71,26 +79,25 @@ public class RestauranteResource {
             throw new NotFoundException();
         }
 
-        List<Restaurante> restaurantes = Prato.list("restaurante", restauranteBanco.get());
+        List<Prato> pratos = Prato.list("restaurante", restauranteBanco.get());
+        List<ListarPratoDTO> dtos = restauranteMapper.toListPratoDTO(pratos);
 
-        return Response.status(Response.Status.OK).entity(restaurantes).build();
+        return Response.status(Response.Status.OK).entity(dtos).build();
     }
 
     @POST
     @Path("{idRestaurante}/pratos")
     @Transactional
     @Tag(name = "Prato")
-    public Response adicionarPratos(@PathParam("idRestaurante") Long idRestaurante, Prato dto) {
+    public Response adicionarPratos(@PathParam("idRestaurante") Long idRestaurante, AdicionarPratoDTO dto) {
         Optional<Restaurante> restauranteBanco = Restaurante.findByIdOptional(idRestaurante);
 
         if(restauranteBanco.isEmpty()) {
             throw new NotFoundException();
         }
-        Prato prato = new Prato();
+
+        Prato prato = restauranteMapper.toEntity(dto);
         prato.restaurante = restauranteBanco.get();
-        prato.nome = dto.nome;
-        prato.descricao = dto.descricao;
-        prato.preco = dto.preco;
         prato.persist();
 
         return Response.status(Response.Status.CREATED).build();
@@ -100,7 +107,7 @@ public class RestauranteResource {
     @Path("{idRestaurante}/pratos/{idPrato}")
     @Transactional
     @Tag(name = "Prato")
-    public Response atualizarPratos(@PathParam("idRestaurante") Long idRestaurante, @PathParam("idPrato") Long idPrato, Prato dto) {
+    public Response atualizarPratos(@PathParam("idRestaurante") Long idRestaurante, @PathParam("idPrato") Long idPrato, AtualizarPratoDTO dto) {
         Optional<Restaurante> restauranteBanco = Restaurante.findByIdOptional(idRestaurante);
 
         if(restauranteBanco.isEmpty()) {
@@ -113,8 +120,9 @@ public class RestauranteResource {
             throw new NotFoundException();
         }
 
-        Prato prato = pratoBanco.get();
-        prato.preco = dto.preco;
+        Prato prato = restauranteMapper.toEntity(dto);
+        prato.restaurante = restauranteBanco.get();
+        prato.persist();
 
         return Response.noContent().build();
     }

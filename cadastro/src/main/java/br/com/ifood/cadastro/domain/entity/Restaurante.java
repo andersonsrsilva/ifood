@@ -6,6 +6,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name= "restaurante")
@@ -25,10 +26,10 @@ public class Restaurante extends PanacheEntityBase {
     public Localizacao localizacao;
 
     @CreationTimestamp
-    public LocalDateTime dataCriacao;
+    public Date dataCriacao;
 
     @UpdateTimestamp
-    public LocalDateTime dataAtualizacao;
+    public Date dataAtualizacao;
 
 }
 
